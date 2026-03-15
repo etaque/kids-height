@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Taille">
+<meta name="theme-color" content="#6366f1">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Suivi de Taille</title>
+<style>
+  :root {
+    --primary: #6366f1; --primary-light: #818cf8; --pink: #ec4899;
+    --amber: #f59e0b; --green: #10b981; --red: #ef4444;
+    --bg: #f8fafc; --card: #ffffff; --text: #1e293b;
+    --muted: #94a3b8; --border: #e2e8f0; --light: #f1f5f9;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    min-height: -webkit-fill-available; overscroll-behavior: none;
+  }
+  html { height: -webkit-fill-available; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; padding: calc(16px + var(--safe-top)) 20px 18px;
+    border-radius: 0 0 24px 24px; position: relative; z-index: 10;
+  }
+  .header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .header p { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+
+  /* Navigation */
+  .nav {
+    display: flex; gap: 6px; padding: 14px 16px 8px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .nav-btn {
+    padding: 8px 18px; border-radius: 20px; border: none; font-size: 13px;
+    font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+    background: var(--light); color: var(--muted);
+  }
+  .nav-btn.active { background: var(--primary); color: white; }
+
+  /* Cards */
+  .card {
+    background: var(--card); border-radius: 16px; padding: 20px;
+    margin: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .card-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+
+  /* Form elements */
+  label.field { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px; display: block; }
+  input, select, textarea {
+    width: 100%; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--border);
+    font-size: 16px; outline: none; transition: border 0.2s; background: white;
+    font-family: inherit; color: var(--text);
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+  .input-group { margin-bottom: 16px; }
+  .height-input {
+    font-size: 28px !important; font-weight: 700; text-align: center;
+    letter-spacing: 1px;
+  }
+
+  /* Buttons */
+  .btn {
+    width: 100%; padding: 13px 20px; border-radius: 14px; border: none;
+    font-size: 16px; font-weight: 700; color: white; cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s; -webkit-appearance: none;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--primary); }
+  .btn-purple { background: #8b5cf6; }
+  .btn-green { background: var(--green); }
+  .btn-outline {
+    background: transparent; color: var(--primary); border: 2px dashed #c7d2fe;
+  }
+  .btn:disabled { opacity: 0.5; }
+  .btn-sm {
+    width: auto; padding: 7px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+  }
+
+  /* Chips */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.2s;
+    background: var(--light); color: var(--muted);
+  }
+  .chip.active { color: white; }
+  .chip-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+
+  /* Gender toggle */
+  .gender-toggle { display: flex; gap: 6px; }
+  .gender-btn {
+    padding: 6px 14px; border-radius: 16px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: none; transition: all 0.2s;
+    background: var(--light); color: var(--muted);
+  }
+  .gender-btn.active-boy { background: var(--primary); color: white; }
+  .gender-btn.active-girl { background: var(--pink); color: white; }
+
+  /* Chart */
+  .chart-container { position: relative; width: 100%; height: 340px; margin: 8px 0; }
+  .chart-legend {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+  }
+  .legend-item {
+    font-size: 11px; padding: 3px 10px; background: var(--bg); border-radius: 8px;
+  }
+
+  /* Measurement rows */
+  .measure-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--light);
+  }
+  .measure-row:last-child { border-bottom: none; }
+  .measure-value { font-weight: 700; }
+  .measure-meta { color: var(--muted); margin-left: 8px; font-size: 13px; }
+  .measure-delete {
+    background: none; border: none; color: var(--red); cursor: pointer;
+    font-size: 20px; padding: 4px 10px; border-radius: 8px;
+  }
+  .measure-delete:hover { background: #fef2f2; }
+
+  /* Child profile row */
+  .child-row {
+    display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+  }
+  .child-row-left { display: flex; align-items: center; gap: 12px; }
+  .child-avatar {
+    width: 42px; height: 42px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; color: white;
+    font-weight: 700; font-size: 18px; flex-shrink: 0;
+  }
+  .child-name { font-weight: 700; }
+  .child-info { font-size: 13px; color: var(--muted); }
+  .child-arrow { color: var(--muted); font-size: 20px; }
+
+  /* Color picker */
+  .color-picker { display: flex; gap: 10px; margin-top: 4px; }
+  .color-dot {
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; transition: border 0.2s;
+  }
+  .color-dot.active { border-color: var(--text); }
+
+  /* Edit form */
+  .edit-form { display: flex; flex-direction: column; gap: 14px; }
+  .edit-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+  /* Export buttons */
+  .export-row { display: flex; gap: 8px; }
+  .export-row .btn { flex: 1; }
+
+  /* Toast */
+  .toast {
+    position: fixed; top: calc(16px + var(--safe-top)); left: 50%; transform: translateX(-50%);
+    background: var(--green); color: white; padding: 10px 28px; border-radius: 14px;
+    font-weight: 600; font-size: 14px; z-index: 100;
+    box-shadow: 0 4px 16px rgba(16,185,129,0.35);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 1.2s forwards;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+  @keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+
+  /* Tab content */
+  .tab-content { padding-bottom: calc(20px + var(--safe-bottom)); }
+
+  /* Scrollable */
+  .page { max-width: 480px; margin: 0 auto; }
+
+  /* Select arrow */
+  select {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%2394a3b8'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    padding-right: 36px;
+  }
+</style>
+</head>
+<body>
+<div class="page" id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ─── WHO Data ───
+const WHO = {
+  boys: [
+    {age:0,p3:46.3,p15:48,p50:49.9,p85:51.8,p97:53.4},
+    {age:.25,p3:55.3,p15:57.2,p50:59.4,p85:61.5,p97:63.4},
+    {age:.5,p3:61.7,p15:63.7,p50:65.9,p85:68.1,p97:70},
+    {age:.75,p3:65.5,p15:67.5,p50:69.8,p85:72.1,p97:74.1},
+    {age:1,p3:68.6,p15:70.7,p50:73.3,p85:75.8,p97:77.8},
+    {age:1.5,p3:73.8,p15:76.1,p50:78.9,p85:81.7,p97:83.9},
+    {age:2,p3:78.7,p15:81.2,p50:84.1,p85:87.1,p97:89.5},
+    {age:2.5,p3:83.1,p15:85.7,p50:88.9,p85:92,p97:94.6},
+    {age:3,p3:87,p15:89.9,p50:93.2,p85:96.5,p97:99.3},
+    {age:3.5,p3:90.5,p15:93.5,p50:97,p85:100.5,p97:103.4},
+    {age:4,p3:93.8,p15:96.9,p50:100.6,p85:104.3,p97:107.3},
+    {age:4.5,p3:96.9,p15:100.2,p50:104,p85:107.9,p97:111},
+    {age:5,p3:99.9,p15:103.3,p50:107.4,p85:111.4,p97:114.6},
+    {age:6,p3:105.3,p15:109,p50:113.4,p85:117.9,p97:121.4},
+    {age:7,p3:110.4,p15:114.4,p50:119.2,p85:124,p97:127.8},
+    {age:8,p3:115.2,p15:119.5,p50:124.6,p85:129.8,p97:133.8},
+    {age:9,p3:119.8,p15:124.4,p50:129.9,p85:135.4,p97:139.7},
+    {age:10,p3:124,p15:128.9,p50:134.8,p85:140.8,p97:145.4},
+    {age:11,p3:128.2,p15:133.5,p50:139.8,p85:146.2,p97:151.2},
+    {age:12,p3:132.8,p15:138.6,p50:145.5,p85:152.4,p97:157.8},
+    {age:13,p3:138.2,p15:144.5,p50:151.8,p85:159.2,p97:165},
+    {age:14,p3:144,p15:150.6,p50:158.2,p85:165.8,p97:171.5},
+    {age:15,p3:149.1,p15:155.8,p50:163.3,p85:170.8,p97:176.3},
+    {age:16,p3:152.4,p15:159,p50:166.3,p85:173.6,p97:178.8},
+    {age:17,p3:154,p15:160.5,p50:167.7,p85:175,p97:180.1},
+    {age:18,p3:154.8,p15:161.2,p50:168.4,p85:175.6,p97:180.6},
+  ],
+  girls: [
+    {age:0,p3:45.6,p15:47.2,p50:49.1,p85:51,p97:52.7},
+    {age:.25,p3:53.8,p15:55.7,p50:57.8,p85:60,p97:61.8},
+    {age:.5,p3:59.8,p15:61.8,p50:64,p85:66.2,p97:68.2},
+    {age:.75,p3:63.3,p15:65.4,p50:67.7,p85:70,p97:72},
+    {age:1,p3:66.3,p15:68.5,p50:71,p85:73.5,p97:75.6},
+    {age:1.5,p3:71.5,p15:73.9,p50:76.7,p85:79.5,p97:81.8},
+    {age:2,p3:76.3,p15:78.9,p50:82,p85:85,p97:87.5},
+    {age:2.5,p3:80.6,p15:83.4,p50:86.6,p85:89.9,p97:92.5},
+    {age:3,p3:84.6,p15:87.5,p50:91,p85:94.5,p97:97.3},
+    {age:3.5,p3:88.2,p15:91.3,p50:95,p85:98.7,p97:101.6},
+    {age:4,p3:91.7,p15:94.9,p50:98.8,p85:102.7,p97:105.8},
+    {age:4.5,p3:95,p15:98.3,p50:102.4,p85:106.5,p97:109.7},
+    {age:5,p3:98.1,p15:101.6,p50:105.9,p85:110.2,p97:113.5},
+    {age:6,p3:103.8,p15:107.6,p50:112.2,p85:116.9,p97:120.5},
+    {age:7,p3:109.1,p15:113.2,p50:118.2,p85:123.2,p97:127},
+    {age:8,p3:114,p15:118.4,p50:123.7,p85:129,p97:133.1},
+    {age:9,p3:118.8,p15:123.5,p50:129,p85:134.6,p97:138.9},
+    {age:10,p3:123.5,p15:128.5,p50:134.3,p85:140.2,p97:144.8},
+    {age:11,p3:128.6,p15:133.9,p50:140.1,p85:146.3,p97:151.1},
+    {age:12,p3:133.8,p15:139.4,p50:145.9,p85:152.3,p97:157.2},
+    {age:13,p3:137.8,p15:143.4,p50:149.8,p85:156.3,p97:161.2},
+    {age:14,p3:139.9,p15:145.5,p50:151.8,p85:158.2,p97:163.1},
+    {age:15,p3:140.9,p15:146.5,p50:152.7,p85:158.9,p97:163.8},
+    {age:16,p3:141.4,p15:146.8,p50:153,p85:159.2,p97:164.1},
+    {age:17,p3:141.5,p15:147,p50:153.1,p85:159.3,p97:164.1},
+    {age:18,p3:141.6,p15:147,p50:153.2,p85:159.3,p97:164.2},
+  ]
+};
+
+const COLORS = ['#6366f1','#ec4899','#f59e0b','#10b981'];
+
+// ─── State ───
+let state = {
+  children: [
+    { id: 'c1', name: 'Enfant 1', gender: 'boy', birthDate: '2022-01-15', color: COLORS[0], measurements: [] },
+    { id: 'c2', name: 'Enfant 2', gender: 'girl', birthDate: '2024-06-01', color: COLORS[1], measurements: [] },
+  ],
+  activeTab: 'chart',
+  selectedChild: 'c1',
+  editingChild: null,
+  chartGender: 'boy',
+};
+
+// ─── Persistence ───
+function save() {
+  try { localStorage.setItem('kids-height-data', JSON.stringify(state.children)); } catch(e) {}
+}
+function load() {
+  try {
+    const d = localStorage.getItem('kids-height-data');
+    if (d) { state.children = JSON.parse(d); }
+  } catch(e) {}
+}
+
+// ─── Helpers ───
+function uid() { return Math.random().toString(36).substr(2,9); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function ageYears(birth, date) {
+  return (new Date(date) - new Date(birth)) / (365.25*24*60*60*1000);
+}
+function fmtAge(y) {
+  if (y < 0) return '—';
+  if (y < 1) return Math.round(y*12) + ' mois';
+  const yr = Math.floor(y), mo = Math.round((y-yr)*12);
+  return mo > 0 ? yr+'a '+mo+'m' : yr+'a';
+}
+function fmtDate(d) { return new Date(d).toLocaleDateString('fr-FR'); }
+function escHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ─── Chart ───
+let chartInstance = null;
+
+function renderChart() {
+  const canvas = document.getElementById('growthChart');
+  if (!canvas) return;
+  if (chartInstance) chartInstance.destroy();
+
+  const who = WHO[state.chartGender === 'boy' ? 'boys' : 'girls'];
+  const whoAges = who.map(w => w.age);
+
+  const datasets = [
+    // WHO bands
+    { label: 'P3-P97', data: who.map(w => [w.p3, w.p97]), type: 'bar',
+      backgroundColor: 'rgba(99,102,241,0.04)', borderWidth: 0, barPercentage: 8,
+      categoryPercentage: 1, parsing: false, hidden: true },
+    // WHO lines
+    ...['p97','p85','p50','p15','p3'].map(p => ({
+      label: p.toUpperCase(),
+      data: who.map(w => ({ x: w.age, y: w[p] })),
+      borderColor: p === 'p50' ? '#64748b' : '#cbd5e1',
+      borderWidth: p === 'p50' ? 2 : 1,
+      borderDash: p === 'p50' ? [] : (p === 'p3' || p === 'p97' ? [6,4] : [3,3]),
+      pointRadius: 0, tension: 0.3, fill: false, order: 2,
+    })),
+    // Children
+    ...state.children.map(child => ({
+      label: child.name,
+      data: child.measurements
+        .map(m => ({ x: ageYears(child.birthDate, m.date), y: m.height }))
+        .filter(d => d.x >= 0 && d.x <= 18)
+        .sort((a,b) => a.x - b.x),
+      borderColor: child.color,
+      backgroundColor: child.color,
+      borderWidth: 2.5,
+      pointRadius: 5, pointBackgroundColor: child.color,
+      pointBorderColor: '#fff', pointBorderWidth: 2,
+      tension: 0.2, fill: false, order: 1,
+    })),
+  ];
+
+  chartInstance = new Chart(canvas, {
+    type: 'line',
+    data: { datasets: datasets.filter(d => d.type !== 'bar') },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: true },
+      scales: {
+        x: {
+          type: 'linear', min: 0, max: 18,
+          title: { display: true, text: 'Âge (années)', font: { size: 11 }, color: '#94a3b8' },
+          ticks: { stepSize: 1, callback: v => v+'a', font: { size: 10 }, color: '#94a3b8' },
+          grid: { color: '#f1f5f9' },
+        },
+        y: {
+          title: { display: true, text: 'Taille (cm)', font: { size: 11 }, color: '#94a3b8' },
+          ticks: { font: { size: 10 }, color: '#94a3b8' },
+          grid: { color: '#f1f5f9' },
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff', titleColor: '#1e293b', bodyColor: '#475569',
+          borderColor: '#e2e8f0', borderWidth: 1, cornerRadius: 10, padding: 10,
+          bodyFont: { size: 13 }, titleFont: { size: 13, weight: 'bold' },
+          callbacks: {
+            title: items => {
+              const item = items[0];
+              if (!item) return '';
+              return fmtAge(item.parsed.x);
+            },
+            label: item => `${item.dataset.label}: ${item.parsed.y} cm`,
+          }
+        }
+      }
+    }
+  });
+}
+
+// ─── Toast ───
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+
+// ─── Render ───
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="header">
+      <h1>Suivi de Taille</h1>
+      <p>Courbes de croissance de vos enfants</p>
+    </div>
+    <nav class="nav">
+      ${['chart:Courbes','add:Mesurer','manage:Enfants','export:Données'].map(t => {
+        const [k,l] = t.split(':');
+        return `<button class="nav-btn ${state.activeTab===k?'active':''}" onclick="switchTab('${k}')">${l}</button>`;
+      }).join('')}
+    </nav>
+    <div class="tab-content">
+      ${state.activeTab === 'chart' ? renderChartTab() : ''}
+      ${state.activeTab === 'add' ? renderAddTab() : ''}
+      ${state.activeTab === 'manage' ? renderManageTab() : ''}
+      ${state.activeTab === 'export' ? renderExportTab() : ''}
+    </div>
+  `;
+  if (state.activeTab === 'chart') setTimeout(renderChart, 50);
+}
+
+function renderChartTab() {
+  return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span class="card-title" style="margin:0">Courbe de croissance</span>
+        <div class="gender-toggle">
+          <button class="gender-btn ${state.chartGender==='boy'?'active-boy':''}" onclick="setGender('boy')">Garçon</button>
+          <button class="gender-btn ${state.chartGender==='girl'?'active-girl':''}" onclick="setGender('girl')">Fille</button>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="growthChart"></canvas>
+      </div>
+      <div class="chart-legend">
+        <span class="legend-item" style="color:#64748b">── P50 (médiane)</span>
+        <span class="legend-item" style="color:#cbd5e1">- - P3 / P97</span>
+        ${state.children.map(c => `<span class="legend-item" style="color:${c.color};font-weight:600">● ${escHtml(c.name)}</span>`).join('')}
+      </div>
+    </div>
+    ${state.children.filter(c => c.measurements.length > 0).map(child => `
+      <div class="card">
+        <div style="font-size:14px;font-weight:700;color:${child.color};margin-bottom:10px">
+          ${escHtml(child.name)} — ${child.measurements.length} mesure${child.measurements.length>1?'s':''}
+        </div>
+        ${child.measurements.map(m => `
+          <div class="measure-row">
+            <div>
+              <span class="measure-value">${m.height} cm</span>
+              <span class="measure-meta">${fmtDate(m.date)} — ${fmtAge(ageYears(child.birthDate, m.date))}</span>
+            </div>
+            <button class="measure-delete" onclick="deleteMeasure('${child.id}','${m.id}')">&times;</button>
+          </div>
+        `).join('')}
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderAddTab() {
+  return `
+    <div class="card">
+      <div class="card-title">Nouvelle mesure</div>
+      <label class="field">Enfant</label>
+      <div class="chips">
+        ${state.children.map(c => `
+          <button class="chip ${state.selectedChild===c.id?'active':''}"
+            style="${state.selectedChild===c.id?'background:'+c.color:''}"
+            onclick="selectChild('${c.id}')">
+            <span class="chip-dot" style="background:${state.selectedChild===c.id?'white':c.color}"></span>
+            ${escHtml(c.name)}
+          </button>
+        `).join('')}
+      </div>
+      <div class="input-group">
+        <label class="field">Date</label>
+        <input type="date" id="measureDate" value="${today()}">
+      </div>
+      <div class="input-group">
+        <label class="field">Taille (cm)</label>
+        <input type="number" id="measureHeight" class="height-input" placeholder="95.5" min="30" max="220" step="0.1" inputmode="decimal">
+      </div>
+      <button class="btn btn-primary" onclick="addMeasure()">Enregistrer la mesure</button>
+    </div>
+  `;
+}
+
+function renderManageTab() {
+  return `
+    ${state.children.map(child => `
+      <div class="card">
+        ${state.editingChild === child.id ? `
+          <div class="edit-form">
+            <div class="input-group">
+              <label class="field">Prénom</label>
+              <input type="text" value="${escHtml(child.name)}" onchange="updateChild('${child.id}','name',this.value)">
+            </div>
+            <div class="input-group">
+              <label class="field">Genre</label>
+              <select onchange="updateChild('${child.id}','gender',this.value)">
+                <option value="boy" ${child.gender==='boy'?'selected':''}>Garçon</option>
+                <option value="girl" ${child.gender==='girl'?'selected':''}>Fille</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="field">Date de naissance</label>
+              <input type="date" value="${child.birthDate}" onchange="updateChild('${child.id}','birthDate',this.value)">
+            </div>
+            <div class="input-group">
+              <label class="field">Couleur</label>
+              <div class="color-picker">
+                ${COLORS.map(c => `
+                  <div class="color-dot ${child.color===c?'active':''}" style="background:${c}"
+                    onclick="updateChild('${child.id}','color','${c}')"></div>
+                `).join('')}
+              </div>
+            </div>
+            <div class="edit-actions">
+              <button class="btn btn-sm btn-primary" onclick="stopEditing()">Valider</button>
+              <button class="btn btn-sm" style="background:#ef4444" onclick="removeChild('${child.id}')">Supprimer</button>
+            </div>
+          </div>
+        ` : `
+          <div class="child-row" onclick="editChild('${child.id}')">
+            <div class="child-row-left">
+              <div class="child-avatar" style="background:${child.color}">${escHtml(child.name[0])}</div>
+              <div>
+                <div class="child-name">${escHtml(child.name)}</div>
+                <div class="child-info">
+                  ${child.gender==='boy'?'Garçon':'Fille'} · Né(e) le ${fmtDate(child.birthDate)}
+                  · ${child.measurements.length} mesure${child.measurements.length!==1?'s':''}
+                </div>
+              </div>
+            </div>
+            <span class="child-arrow">›</span>
+          </div>
+        `}
+      </div>
+    `).join('')}
+    ${state.children.length < 4 ? `
+      <div style="padding:0 16px;margin-top:8px">
+        <button class="btn btn-outline" onclick="addChild()">+ Ajouter un enfant</button>
+      </div>
+    ` : ''}
+  `;
+}
+
+function renderExportTab() {
+  return `
+    <div class="card">
+      <div class="card-title">Exporter les données</div>
+      <div class="export-row">
+        <button class="btn btn-primary" onclick="exportJSON()">Export JSON</button>
+        <button class="btn btn-purple" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Importer (JSON)</div>
+      <div class="input-group">
+        <textarea id="importArea" rows="5" placeholder="Collez ici le contenu JSON exporté..." style="font-family:monospace;font-size:13px"></textarea>
+      </div>
+      <button class="btn btn-green" onclick="importJSON()">Importer</button>
+    </div>
+  `;
+}
+
+// ─── Actions ───
+function switchTab(tab) { state.activeTab = tab; render(); }
+function setGender(g) { state.chartGender = g; render(); }
+function selectChild(id) { state.selectedChild = id; render(); }
+function editChild(id) { state.editingChild = id; render(); }
+function stopEditing() { state.editingChild = null; save(); render(); }
+
+function addMeasure() {
+  const date = document.getElementById('measureDate').value;
+  const height = parseFloat(document.getElementById('measureHeight').value);
+  if (!height || height < 30 || height > 220) return;
+  const child = state.children.find(c => c.id === state.selectedChild);
+  if (!child) return;
+  child.measurements.push({ id: uid(), date, height });
+  child.measurements.sort((a,b) => new Date(a.date) - new Date(b.date));
+  save();
+  showToast('Mesure enregistrée ✓');
+  render();
+}
+
+function deleteMeasure(childId, measId) {
+  const child = state.children.find(c => c.id === childId);
+  if (!child) return;
+  child.measurements = child.measurements.filter(m => m.id !== measId);
+  save(); render();
+}
+
+function addChild() {
+  const id = uid();
+  state.children.push({
+    id, name: 'Enfant '+(state.children.length+1), gender: 'boy',
+    birthDate: '2023-01-01', color: COLORS[state.children.length % COLORS.length],
+    measurements: []
+  });
+  state.editingChild = id;
+  save(); render();
+}
+
+function updateChild(id, field, value) {
+  const child = state.children.find(c => c.id === id);
+  if (child) { child[field] = value; save(); render(); }
+}
+
+function removeChild(id) {
+  if (!confirm('Supprimer cet enfant et toutes ses mesures ?')) return;
+  state.children = state.children.filter(c => c.id !== id);
+  state.editingChild = null;
+  if (state.selectedChild === id && state.children.length) state.selectedChild = state.children[0].id;
+  save(); render();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state.children, null, 2)], {type:'application/json'});
+  dl(blob, 'kids-height-data.json');
+}
+
+function exportCSV() {
+  let csv = 'Enfant,Genre,Date naissance,Date mesure,Taille (cm),Age\n';
+  state.children.forEach(c => c.measurements.forEach(m => {
+    csv += `"${c.name}",${c.gender},${c.birthDate},${m.date},${m.height},"${fmtAge(ageYears(c.birthDate,m.date))}"\n`;
+  }));
+  dl(new Blob([csv],{type:'text/csv'}), 'kids-height-data.csv');
+}
+
+function dl(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJSON() {
+  const txt = document.getElementById('importArea').value;
+  try {
+    const data = JSON.parse(txt);
+    if (Array.isArray(data)) {
+      state.children = data;
+      save(); showToast('Données importées ✓'); render();
+    } else { alert('Le JSON doit être un tableau.'); }
+  } catch(e) { alert('Format JSON invalide.'); }
+}
+
+// ─── Init ───
+load();
+if (state.children.length) state.selectedChild = state.children[0].id;
+render();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
